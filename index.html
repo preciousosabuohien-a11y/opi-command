@@ -1874,4 +1874,57 @@ function fmtDayTxt(day){
 
 // ══════════════════════════════════════════
 // POMODORO
-// ══�
+// ══════════════════════════════════════════
+const WORK_S=25*60,BRK_S=5*60;
+let pomo={run:false,mode:'work',rem:WORK_S,tot:WORK_S},pomoTmr=null;
+function fmt(s){return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
+function updatePomoUI(){
+  const t=fmt(pomo.rem);
+  document.getElementById('pill-time').textContent=t;
+  document.getElementById('pm-time').textContent=t;
+  document.getElementById('fs-timer').textContent=t;
+  document.getElementById('pm-lbl').textContent=pomo.mode==='work'?'WORK':'BREAK';
+  document.getElementById('pill-st').textContent=pomo.run?(pomo.mode==='work'?'WORK':'BREAK'):'IDLE';
+  const pill=document.getElementById('pomo-pill');
+  pill.className='pomo-pill'+(pomo.run?(pomo.mode==='work'?' work':' brk'):'');
+  const circ=2*Math.PI*68,fill=document.getElementById('pr-fill');
+  fill.style.strokeDasharray=circ;fill.style.strokeDashoffset=circ-(circ*pomo.rem/pomo.tot);
+  fill.className='pr-fill'+(pomo.mode==='brk'?' brk':'');
+  document.getElementById('pm-sess').textContent=D.focus.sessions||0;
+}
+function startPomo(){
+  if(pomoTmr)return;pomo.run=true;document.getElementById('pomo-start').textContent='▶ Running…';
+  pomoTmr=setInterval(()=>{
+    pomo.rem--;
+    if(pomo.rem<=0){
+      clearInterval(pomoTmr);pomoTmr=null;pomo.run=false;
+      document.getElementById('pomo-start').textContent='▶ Start';
+      beep(pomo.mode==='work');
+      if(pomo.mode==='work'){D.focus.sessions=(D.focus.sessions||0)+1;saveDay();renderFocus();pomo.mode='brk';pomo.rem=BRK_S;pomo.tot=BRK_S}
+      else{pomo.mode='work';pomo.rem=WORK_S;pomo.tot=WORK_S}
+    }
+    updatePomoUI();
+  },1000);updatePomoUI();
+}
+function pausePomo(){clearInterval(pomoTmr);pomoTmr=null;pomo.run=false;document.getElementById('pomo-start').textContent='▶ Start';updatePomoUI()}
+function resetPomo(){pausePomo();pomo={run:false,mode:'work',rem:WORK_S,tot:WORK_S};updatePomoUI()}
+function beep(w){
+  try{const c=new(window.AudioContext||window.webkitAudioContext)();
+    [[w?880:440,0],[w?660:330,.18]].forEach(([f,d])=>{
+      const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);
+      o.frequency.value=f;o.type='sine';g.gain.setValueAtTime(.25,c.currentTime+d);
+      g.gain.exponentialRampToValueAtTime(.001,c.currentTime+d+.45);o.start(c.currentTime+d);o.stop(c.currentTime+d+.5);
+    });}catch(e){}
+}
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+buildTimeGrid();
+renderMITs();renderFocus();renderDump();renderDistractions();renderReview();
+updatePulse();updatePomoUI();
+renderTasks();
+initVault(); // auto-reconnect vault on every page open
+</script>
+</body>
+</html>�
